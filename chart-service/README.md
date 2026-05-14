@@ -1,120 +1,115 @@
-#  Chart Service — Визуализация эпидемиологической статистики
+Вот готовый `README.md`, составленный на основе нашего диалога. Все команды продублированы для **Bash** (Linux/macOS) и **PowerShell** (Windows). Вы можете просто скопировать этот текст и заменить им текущий файл в репозитории.
 
-Веб-приложение на Spring Boot + ClickHouse. Показывает процент заболеваемости по регионам РФ.
+```markdown
+# 📊 ClickHouse Chart Service Sandbox
 
-🔗 Локальный адрес после запуска: `http://localhost:8080`
+Учебный проект для демонстрации работы Java-сервиса с ClickHouse. Включает генерацию тестовых данных (~80 млн записей), запуск через Docker Compose и REST API для визуализации.
+
+---
+
+## 📦 Требования
+- Docker Desktop + Docker Compose v2
+- Git (для клонирования репозитория)
+- 8+ ГБ свободной памяти (рекомендуется для генерации данных)
 
 ---
 
 ## 🚀 Быстрый старт
 
-### Требования
-- Docker ≥ 20.10
-- Docker Compose ≥ 2.0
-- Git
+### 1️⃣ Перейдите в директорию сервиса
+Все конфигурационные файлы (`docker-compose.yml`, `Dockerfile`) находятся внутри папки `chart-service`.
 
-### 1. Клонируй репозиторий
+**Bash / Linux / macOS:**
 ```bash
-git clone https://github.com/nfernis/clickhouse_sandbox.git
-cd chart-service
+cd clickhouse_sandbox/chart-service
 ```
 
-### 2. Запусти сервисы
+**PowerShell (Windows):**
+```powershell
+cd clickhouse_sandbox\chart-service
+```
+
+---
+
+### 2️⃣ Запустите контейнеры
+Сборка и запуск ClickHouse + Java-приложения:
+
 ```bash
 docker-compose up --build -d
 ```
-
-### 3. Подожди ~30 секунд
-Таблицы создадутся автоматически из `init.sql`.
-
-### 4. Открой в браузере
-👉 `http://localhost:8080`
-
-> ️ График будет пустым, пока не наполнишь базу данными (см. раздел «Данные»).
+⏳ *Дождитесь полной инициализации ClickHouse (обычно 20–40 секунд).*  
+Проверить готовность: `docker-compose ps` (статус `Up` для обоих сервисов).
 
 ---
 
-## 🗄️ Данные
+### 3️⃣ Создайте таблицы (DDL)
+Схема БД находится в `clickhouse-init/init.sql`.
 
-Таблицы `medical_visits` и `weekly_epid_stats` уже созданы (см. `init.sql`).
+**Bash / Linux / macOS:**
+```bash
+cat clickhouse-init/init.sql | docker-compose exec -T clickhouse clickhouse-client --multiquery
+```
 
-### Вариант А: Сгенерировать тестовые данные (80 млн записей)
-
-1. Выполни скрипт генерации:
-   ```bash
-   docker-compose exec clickhouse clickhouse-client < generate_data.sql
-   ```
-   *(Займёт 2-5 минут)*
-
-2. Проверь, что данные появились:
-   ```bash
-   docker-compose exec clickhouse clickhouse-client --query "SELECT count() FROM weekly_epid_stats"
-   ```
-
-3. Обнови страницу графика — готово! 🎉
-
-### Вариант Б: Вставить свои данные
-
-1. Подключись к ClickHouse:
-   ```bash
-   docker-compose exec clickhouse clickhouse-client
-   ```
-
-2. Выполняй свои `INSERT`-запросы:
-   ```sql
-   INSERT INTO medical_visits VALUES (...);
-   ```
-
-3. Данные в `weekly_epid_stats` появятся автоматически (сработает Materialized View).
-
----
-
-## ⚙️ Конфигурация
-
-### Переменные окружения (в `docker-compose.yml`)
-
-| Переменная | Значение по умолчанию                                  | Описание |
-|-----------|--------------------------------------------------------|----------|
-| `SPRING_DATASOURCE_URL` | `jdbc:clickhouse://clickhouse:8123/default?compress=0` | URL подключения к БД |
-| `SPRING_DATASOURCE_USERNAME` | `default`                                              | Пользователь БД |
-| `SPRING_DATASOURCE_PASSWORD` | `test123123`                                             | Пароль БД |
-
-
-
-### Порты
-
-| Порт | Сервис | Описание |
-|------|--------|----------|
-| `8080` | chart-service | Веб-интерфейс (график) |
-| `8123` | clickhouse | HTTP-интерфейс БД (для запросов) |
-| `9000` | clickhouse | Native-порт (для JDBC) |
-
----
-
-## 🔌 API Эндпоинты
-
-| Метод | Путь | Описание |
-|-------|------|----------|
-| `GET` | `/api/epid/by-municipality` | Данные для графика (ID муниципалитета + кол-во пациентов) |
-
-**Пример ответа:**
-```json
-[
-  {"municipalityId": 77, "uniquePatientsCount": 2837446},
-  {"municipalityId": 64, "uniquePatientsCount": 5346256}
-]
+**PowerShell (Windows):**
+```powershell
+Get-Content clickhouse-init\init.sql | docker-compose exec -T clickhouse clickhouse-client --multiquery
 ```
 
 ---
 
+### 4️⃣ Загрузите тестовые данные
+Генерация и вставка ~80 млн строк через `numbers_mt`.
 
+**Bash / Linux / macOS:**
+```bash
+cat generate_data.sql | docker-compose exec -T clickhouse clickhouse-client --multiquery
 ```
-chart-service/
-├── src/                     # Исходный код Spring Boot
-├── init.sql                 # DDL: CREATE TABLE / VIEW
-├── generate_data.sql        # Скрипт генерации 80 млн тестовых записей
-├── Dockerfile               # Сборка приложения
-├── docker-compose.yml       # Запуск всего стека
-├── README.md                # Этот файл
-└── .gitignore              # Исключает *.tsv, target/, и т.д.
+
+**PowerShell (Windows):**
+```powershell
+Get-Content generate_data.sql | docker-compose exec -T clickhouse clickhouse-client --multiquery
 ```
+⏱️ *Выполнение занимает 1–4 минуты. Отсутствие вывода в терминале — норма, не закрывайте окно до появления приглашения командной строки.*
+
+---
+
+### 5️⃣ Проверка работоспособности
+1. **Количество строк в таблице:**
+   ```bash
+   docker-compose exec clickhouse clickhouse-client --query "SELECT count() FROM medical_visits"
+   ```
+   ✅ Ожидаемый результат: `80000000`
+
+2. **Статус Java-сервиса:**
+   Откройте в браузере: `http://localhost:8080/actuator/health`  
+   ✅ Ожидаемый ответ: `{"status":"UP"}`
+
+---
+
+## 🐛 Частые проблемы и решения
+
+| Ошибка / Симптом | Причина | Решение |
+|------------------|---------|---------|
+| `no configuration file provided: not found` | Запуск не из папки `chart-service` | Перейдите в `cd chart-service` перед выполнением команд |
+| `Оператор "<" зарезервирован...` (PowerShell) | PS не поддерживает `bash`-редирект `<` | Используйте `Get-Content файл.sql \| docker-compose exec -T ...` |
+| `SYNTAX_ERROR` на `;` | `clickhouse-client` не поддерживает мультизапросы по умолчанию | Добавьте флаг `--multiquery` к команде `clickhouse-client` |
+| `service "clickhouse" is not running` | Контейнер ещё не успел стартовать | Проверьте `docker-compose ps`, дождитесь статуса `Up` (20-40 сек) |
+| `time="..." level=warning ... version is obsolete` | Docker Compose v2 игнорирует поле `version:` | Безопасно игнорировать. Можно удалить строку `version: '3.x'` из `docker-compose.yml` |
+
+---
+
+## 🛠 Полезные команды
+
+| Действие | Команда |
+|----------|---------|
+| Просмотр логов сервиса | `docker-compose logs -f app` или `... clickhouse` |
+| Остановка и очистка контейнеров + томов | `docker-compose down -v` |
+| Проверка статуса контейнеров | `docker-compose ps` |
+| Подключение к CLI ClickHouse | `docker-compose exec clickhouse clickhouse-client` |
+
+---
+
+## 📝 Примечания
+- Флаг `-T` в `docker-compose exec -T` обязателен при передаче данных через pipe, иначе Docker пытается выделить псевдо-терминал и блокирует ввод.
+- Генерация данных выполняется на стороне ClickHouse (`numbers_mt`), поэтому нагрузка ложится на CPU контейнера, а не на хост-машину.
+- При нехватке памяти увеличьте лимиты в Docker Desktop: ⚙️ `Resources` → `Memory` ≥ 4GB.

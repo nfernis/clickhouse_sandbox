@@ -81,7 +81,11 @@
         const values = chartData.map(d => parseFloat(d.percent)); // 🔹 Теперь на графике проценты!
 
         // 🔹 Цвета по порогу (порог теперь тоже в %!)
+<<<<<<< HEAD
         const thresholdPercent = 3.5; // 0.15% = 1500 чел. на 1 млн населения (пример)
+=======
+        const thresholdPercent = 10; // 0.15% = 1500 чел. на 1 млн населения (пример)
+>>>>>>> 4ca60c8 (readme)
         const colors = values.map(v => v > thresholdPercent ? 'rgba(220, 53, 69, 0.7)' : 'rgba(40, 167, 69, 0.7)');
         const borders = values.map(v => v > thresholdPercent ? 'rgb(220, 53, 69)' : 'rgb(40, 167, 69)');
 
