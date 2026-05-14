@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<script src="municipalities.js"></script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заболеваемость по регионам</title>
+    <!-- Chart.js + плагин для линии порога -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; background: #f4f6f9; color: #333; }
+        h1 { margin-bottom: 10px; }
+        .panel { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        input[type="number"] { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; width: 120px; }
+        button { padding: 6px 16px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .chart-box { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); height: 500px; }
+        .hint { font-size: 0.85rem; color: #666; margin-top: 5px; }
+    </style>
+</head>
+<body>
+<h1>Заболеваемость за последнюю неделю</h1>
+
+<div class="panel">
+    <div class="hint">Порог заболеваемости: 0.15% заболевших от общего числа населения</div>
+</div>
+
+<div class="chart-box">
+    <canvas id="mainChart"></canvas>
+</div>
+
+<script>
+    // 🔧 2. Какие регионы показывать на графике (по ID)
+    // Оставь пустым [], чтобы показать ВСЕ доступные регионы
+    const SHOW_IDS = [];
+
+    let chartInstance = null;
+
+    async function renderChart() {
+        const threshold = 1500 || 0;
+
+        try {
+            // Берём данные с нашего эндпоинта
+            const res = await fetch('/api/epid/by-municipality');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const rawData = await res.json();
+
+            // 🔹 Агрегируем: суммируем uniquePatientsCount по каждому municipalityId
+            const aggregated = {};
+            rawData.forEach(row => {
+                const id = row.municipalityId;
+                if (!aggregated[id]) aggregated[id] = 0;
+                aggregated[id] += row.uniquePatientsCount;
+            });
+
+            // 🔹 Фильтруем и формируем массивы для Chart.js
+            const entries = Object.entries(aggregated)
+                .filter(([id]) => SHOW_IDS.length === 0 || SHOW_IDS.includes(Number(id)))
+                .sort((a, b) => b[1] - a[1]); // сортировка по убыванию
+
+// 🔹 Формируем данные для графика: процент заболевших от населения
+        const chartData = entries.map(([idStr, sickCount]) => {
+            const id = Number(idStr);
+            const mun = MUNICIPALITIES[id];
+
+            // Если нет данных о населении — показываем 0%, но в тултипе будет число
+            const population = mun?.population || 1;
+            const percent = (sickCount / population) * 100;
+
+            return {
+                id,
+                label: mun?.name || `Регион ${id}`,
+                sickCount,
+                population,
+                percent: percent.toFixed(2)  // 2 знака после запятой
+            };
+        });
+
+        const labels = chartData.map(d => d.label);
+        const values = chartData.map(d => parseFloat(d.percent)); // 🔹 Теперь на графике проценты!
+
+        // 🔹 Цвета по порогу (порог теперь тоже в %!)
+        const thresholdPercent = 0.15; // 0.15% = 1500 чел. на 1 млн населения (пример)
+        const colors = values.map(v => v > thresholdPercent ? 'rgba(220, 53, 69, 0.7)' : 'rgba(40, 167, 69, 0.7)');
+        const borders = values.map(v => v > thresholdPercent ? 'rgb(220, 53, 69)' : 'rgb(40, 167, 69)');
+
+            // 🔹 Рисуем/обновляем график
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(document.getElementById('mainChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Уникальные пациенты',
+                        data: values,
+                        backgroundColor: colors,
+                        borderColor: borders,
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const item = chartData[ctx.dataIndex];
+                                    return [
+                                        `Заболевших: ${item.sickCount.toLocaleString('ru-RU')} чел.`,
+                                        `Население: ${item.population.toLocaleString('ru-RU')} чел.`,
+                                        `Доля: ${item.percent}%`
+                                    ];
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                thresholdLine: {
+                                    type: 'line',
+                                    yMin: thresholdPercent,
+                                    yMax: thresholdPercent,
+                                    borderColor: 'rgb(255, 193, 7)',
+                                    borderWidth: 2,
+                                    borderDash: [6, 4],
+                                    label: {
+                                        display: true,
+                                        content: `Порог: ${thresholdPercent}%`,
+                                        position: 'end',
+                                        backgroundColor: 'rgba(255, 193, 7, 0.85)',
+                                        color: '#000',
+                                        padding: 4,
+                                        borderRadius: 4
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: v => `${Number(v).toFixed(2)}%` }
+                        }
+                    }
+                }
+            });
+
+        } catch (err) {
+            alert('Ошибка загрузки данных: ' + err.message);
+            console.error(err);
+        }
+    }
+
+    // Автозапуск при открытии страницы
+    window.addEventListener('DOMContentLoaded', renderChart);
+</script>
+</body>
+</html>
