@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    container_name: chart-clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=test123123
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - clickhouse_data:/var/lib/clickhouse
+
+  app:
+    build: .
+    container_name: chart-service
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:clickhouse://clickhouse:8123/default?compress=0
+      - SPRING_DATASOURCE_USERNAME=default
+      - SPRING_DATASOURCE_PASSWORD=test123123
+    depends_on:
+      - clickhouse
+    restart: on-failure
+
+volumes:
+  clickhouse_data:
