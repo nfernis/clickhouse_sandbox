@@ -7,6 +7,11 @@ spring:
     username: default
     password: "test123123"
     driver-class-name: com.clickhouse.jdbc.ClickHouseDriver
+    data:
+      redis:
+        host: chart-redis
+        port: 6379
+        timeout: 2000ms
 
 
     hikari:

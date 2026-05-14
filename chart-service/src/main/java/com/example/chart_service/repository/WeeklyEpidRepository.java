@@ -5,6 +5,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Repository
@@ -14,6 +16,36 @@ public class WeeklyEpidRepository {
 
     public WeeklyEpidRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
+    }
+
+    public List<WeeklyEpidData> findByWeekStartAndMunicipality(LocalDate weekStart, List<Long> municipalityIds) {
+        StringBuilder sql = new StringBuilder("""
+            SELECT 
+                week_start, 
+                NULL as icd10_group, 
+                municipality_id, 
+                uniqCombinedMerge(unique_patients) as uniquePatientsCount
+            FROM weekly_epid_stats
+            WHERE week_start = ?
+            """);
+
+        List<Object> params = new ArrayList<>(List.of(weekStart));
+
+        if (municipalityIds != null && !municipalityIds.isEmpty()) {
+            sql.append(" AND municipality_id IN (");
+            sql.append(String.join(",", Collections.nCopies(municipalityIds.size(), "?")));
+            sql.append(")");
+            params.addAll(municipalityIds);
+        }
+
+        sql.append(" GROUP BY week_start, municipality_id ORDER BY uniquePatientsCount DESC");
+
+        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> new WeeklyEpidData(
+                rs.getObject("week_start", LocalDate.class),
+                null, // icd10Group не нужен при общей агрегации
+                rs.getLong("municipality_id"),
+                rs.getLong("uniquePatientsCount")
+        ), params.toArray());
     }
 
     public List<WeeklyEpidData> findWeeklyData(String icd10Group, Long municipalityId, int weeks) {
@@ -57,6 +89,7 @@ public class WeeklyEpidRepository {
                 params.toArray()
         );
     }
+    //Лист с заболевшими
     public List<WeeklyEpidData> findLastWeekByMunicipality(List<Long> municipalityIds) {
         StringBuilder sql = new StringBuilder("""
         SELECT 
@@ -89,4 +122,8 @@ public class WeeklyEpidRepository {
                 municipalityIds != null ? municipalityIds.toArray() : new Object[0]
         );
     }
+    //теперь все за эту неделю
+
+
+
 }

@@ -32,15 +32,13 @@ public class WeeklyEpidController {
     }
     @GetMapping("/by-municipality")
     public List<WeeklyEpidData> getByMunicipality(
+            @RequestParam(defaultValue = "previous") String week,
             @RequestParam(required = false) String municipality_ids) {
 
-        List<Long> ids = null;
-        if (municipality_ids != null && !municipality_ids.isBlank()) {
-            ids = Arrays.stream(municipality_ids.split(","))
-                    .map(String::trim)
-                    .map(Long::parseLong)
-                    .collect(Collectors.toList());
-        }
-        return service.getLastWeekByMunicipality(ids);
+        List<Long> ids = municipality_ids != null
+                ? Arrays.stream(municipality_ids.split(",")).map(Long::parseLong).collect(Collectors.toList())
+                : null;
+
+        return service.getDataForWeek(week, ids);
     }
 }

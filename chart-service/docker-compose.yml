@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   clickhouse:
     image: clickhouse/clickhouse-server:24.3-alpine
@@ -12,8 +10,28 @@ services:
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=test123123
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./clickhouse-init/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
       - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: chart-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
     build: .
@@ -24,9 +42,15 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:clickhouse://clickhouse:8123/default?compress=0
       - SPRING_DATASOURCE_USERNAME=default
       - SPRING_DATASOURCE_PASSWORD=test123123
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
     depends_on:
-      - clickhouse
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: on-failure
 
 volumes:
   clickhouse_data:
+  redis_data:
