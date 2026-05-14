@@ -1,5 +1,3 @@
-Вот готовый `README.md`, составленный на основе нашего диалога. Все команды продублированы для **Bash** (Linux/macOS) и **PowerShell** (Windows). Вы можете просто скопировать этот текст и заменить им текущий файл в репозитории.
-
 ```markdown
 # 📊 ClickHouse Chart Service Sandbox
 
@@ -15,6 +13,10 @@
 ---
 
 ## 🚀 Быстрый старт
+Клонируй репозиторий
+
+git clone https://github.com/nfernis/clickhouse_sandbox.git
+
 
 ### 1️⃣ Перейдите в директорию сервиса
 Все конфигурационные файлы (`docker-compose.yml`, `Dockerfile`) находятся внутри папки `chart-service`.
