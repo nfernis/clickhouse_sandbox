@@ -23,7 +23,7 @@
 <h1>Заболеваемость за последнюю неделю</h1>
 
 <div class="panel">
-    <div class="hint">Порог заболеваемости: 0.15% заболевших от общего числа населения</div>
+    <div class="hint">Порог заболеваемости: 3.5% заболевших от общего числа населения</div>
 </div>
 
 <div class="chart-box">
@@ -81,7 +81,7 @@
         const values = chartData.map(d => parseFloat(d.percent)); // 🔹 Теперь на графике проценты!
 
         // 🔹 Цвета по порогу (порог теперь тоже в %!)
-        const thresholdPercent = 0.15; // 0.15% = 1500 чел. на 1 млн населения (пример)
+        const thresholdPercent = 3.5; // 0.15% = 1500 чел. на 1 млн населения (пример)
         const colors = values.map(v => v > thresholdPercent ? 'rgba(220, 53, 69, 0.7)' : 'rgba(40, 167, 69, 0.7)');
         const borders = values.map(v => v > thresholdPercent ? 'rgb(220, 53, 69)' : 'rgb(40, 167, 69)');
 
