@@ -22,9 +22,10 @@ public class WeeklyEpidService {
 
     public List<WeeklyEpidData> getDataForWeek(String weekParam, List<Long> municipalityIds) {
         //сначала идем в редис
+        System.out.println("идем в кэш");
         List<WeeklyEpidData> cached = cache.get(weekParam);
         if (cached != null) {
-            return cached; // ⚡ Вернули мгновенно
+            return cached;
         }
 
         LocalDate today = LocalDate.now();

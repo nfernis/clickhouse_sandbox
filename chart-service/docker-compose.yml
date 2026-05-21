@@ -1,4 +1,23 @@
 services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: chart-redis-insight
+    ports:
+      - "5540:5540"                     # ← UI: http://localhost:5540
+    volumes:
+      - redis_insight_data:/data        # чтобы настройки не сбрасывались
+    depends_on:
+      - redis
+    restart: unless-stopped
   clickhouse:
     image: clickhouse/clickhouse-server:24.3-alpine
     container_name: chart-clickhouse
@@ -54,3 +73,4 @@ services:
 volumes:
   clickhouse_data:
   redis_data:
+  redis_insight_data:

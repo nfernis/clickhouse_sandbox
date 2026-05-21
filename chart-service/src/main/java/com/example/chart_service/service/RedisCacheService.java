@@ -29,12 +29,12 @@ public class RedisCacheService {
     }
 
     public List<WeeklyEpidData> get(String weekParam) {
+        System.out.println("Мы сходили в кэш");
         String key = KEY_PREFIX + weekParam;
         String json = redisTemplate.opsForValue().get(key);
 
         if (json != null) {
             try {
-                System.out.println("✅ CACHE HIT: " + key);
                 return objectMapper.readValue(json, new TypeReference<List<WeeklyEpidData>>() {});
             } catch (Exception e) {
                 redisTemplate.delete(key);
@@ -52,13 +52,10 @@ public class RedisCacheService {
         try {
             String json = objectMapper.writeValueAsString(data);
             redisTemplate.opsForValue().set(key, json, ttlSeconds, TimeUnit.SECONDS);
-            System.out.println("💾 CACHE SET: " + key + " (TTL: " + ttlSeconds/60 + " мин)");
         } catch (Exception e) {
-            System.err.println("⚠️ Cache write failed: " + e.getMessage());
         }
     }
 
-    // 🔥 Умный расчёт TTL
     private long calculateTTL(String weekParam) {
         if ("current".equals(weekParam)) {
             // 🔹 Текущая неделя: 5 минут (данные могут обновляться)
